@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import AllPlayers from "./components/AllPlayers";
+import Layout from "./components/Layout";
 import SeeDetails from "./components/SeeDetails";
 import "./global.css";
 
@@ -8,7 +8,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/players/:id" element={<SeeDetails />} />
-        <Route path="/" element={<AllPlayers />} />
+        <Route path="/" element={<Layout />} />
       </Routes>
     </Router>
   );

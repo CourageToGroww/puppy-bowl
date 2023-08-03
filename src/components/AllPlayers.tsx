@@ -3,7 +3,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import NewPlayerForm from "./NewPlayerForm";
 import { Link } from "react-router-dom";
-import { loadPlayers, benchPlayer, unBenchPlayer } from "../slices/playerSlice";
+import {
+  loadPlayers,
+  benchPlayer,
+  unBenchPlayer,
+  pickPlayerToPicked,
+} from "../slices/playerSlice";
 
 interface AllPlayersProps {}
 
@@ -111,6 +116,7 @@ const AllPlayers: React.FC<AllPlayersProps> = () => {
         if (benchedPlayers.length < 3) {
           setTimeout(() => {
             dispatch(benchPlayer(id));
+            dispatch(pickPlayerToPicked(player));
           }, 0);
         } else {
           setBenchLimitExceeded(true);
@@ -197,9 +203,9 @@ const AllPlayers: React.FC<AllPlayersProps> = () => {
             >
               <button
                 onClick={() => handleBenchClick(player.id)}
-                className={`absolute top-0 right-0 mt-2 mr-2 px-2 py-1 text-xs rounded-full 
+                className={`absolute top-0 right-0 mt-2 mr-2 px-2 py-1 text-xs rounded-full
   ${player.isBenched ? "text-white bg-green-500" : " text-red-500"} 
-  hover:${player.isBenched ? "bg-green-700" : "border-red-700 text-red-700"}`}
+  hover:${player.isBenched ? "bg-green-700" : " text-red-700"}`}
               >
                 {player.isBenched ? "✔️" : "🔲"}
               </button>
