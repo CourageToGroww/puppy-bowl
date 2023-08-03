@@ -7,11 +7,14 @@ interface Player {
   name: string;
   breed: string;
   imageUrl: string;
+  isBenched: boolean;
 }
+
+interface AllPlayersProps {}
 
 const COHORT = "2302-ACC-CT-WEB-PT-A";
 
-const AllPlayers: React.FC = () => {
+const AllPlayers: React.FC<AllPlayersProps> = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -19,6 +22,10 @@ const AllPlayers: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [showMessage, setShowMessage] = useState<boolean>(false);
   const [playersCreated, setPlayersCreated] = useState(0);
+  const [benchLimitExceeded, setBenchLimitExceeded] = useState<boolean>(false);
+  const [benchLimitMessage, setBenchLimitMessage] = useState<string | null>(
+    null
+  );
 
   const fetchPlayers = useCallback(async () => {
     try {
@@ -58,6 +65,47 @@ const AllPlayers: React.FC = () => {
       return () => clearTimeout(timer); //  will clear the timer if the component unmounts before the 5 seconds are up
     }
   }, [showMessage]);
+
+  // handler function for bench  click
+  const handleBenchClick = (id: number) => {
+    const benchedPlayersCount = players.filter(
+      (player) => player.isBenched
+    ).length;
+    if (
+      benchedPlayersCount < 3 ||
+      players.find((player) => player.id === id)?.isBenched
+    ) {
+      setPlayers(
+        players.map((player) =>
+          player.id === id
+            ? { ...player, isBenched: !player.isBenched }
+            : player
+        )
+      );
+      setBenchLimitExceeded(false);
+    } else {
+      setBenchLimitExceeded(true);
+      setBenchLimitMessage("You can only add 3 players!");
+    }
+  };
+
+  // timer for  bench limit exceeded message to disappear
+  useEffect(() => {
+    if (benchLimitExceeded === true) {
+      setBenchLimitMessage("You can only add 3 players!");
+    }
+  }, [benchLimitExceeded]);
+
+  // Timer for the div to disappear
+  useEffect(() => {
+    if (benchLimitExceeded) {
+      const timer = setTimeout(() => {
+        setBenchLimitExceeded(false);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [benchLimitExceeded]);
 
   const deletePlayer = async (id: number) => {
     try {
@@ -100,8 +148,17 @@ const AllPlayers: React.FC = () => {
       <div>
         {showMessage && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="h-24 bg-green-500 bg-opacity-25 rounded w-72 backdrop-blur">
-              <h2 className="mt-8 font-bold text-center">{message}</h2>
+            <div className="h-32 bg-green-500 bg-opacity-25 rounded w-120 backdrop-blur">
+              <h2 className="font-bold text-center mt-14">{message}</h2>
+            </div>
+          </div>
+        )}
+        {benchLimitExceeded && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="h-32 bg-red-500 bg-opacity-25 rounded w-120 backdrop-blur">
+              <h2 className="font-bold text-center mt-14">
+                {benchLimitMessage}
+              </h2>
             </div>
           </div>
         )}
@@ -124,8 +181,16 @@ const AllPlayers: React.FC = () => {
           {filteredPlayers.map((player) => (
             <div
               key={player.id}
-              className="p-4 overflow-auto border rounded bg-amber-200"
+              className="relative p-4 overflow-auto border rounded bg-amber-200"
             >
+              <button
+                onClick={() => handleBenchClick(player.id)}
+                className={`absolute top-0 right-0 mt-2 mr-2 px-2 py-1 text-xs rounded-full 
+  ${player.isBenched ? "text-white bg-green-500" : " text-red-500"} 
+  hover:${player.isBenched ? "bg-green-700" : "border-red-700 text-red-700"}`}
+              >
+                {player.isBenched ? "✔️" : "🔲"}
+              </button>
               <h2
                 className="font-bungee"
                 style={{ fontSize: getFontSize(player.name) }}
