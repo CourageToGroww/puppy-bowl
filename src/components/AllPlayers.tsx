@@ -1,21 +1,16 @@
+import { RootState, Player } from "../app/store";
 import React, { useState, useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import NewPlayerForm from "./NewPlayerForm";
 import { Link } from "react-router-dom";
-
-interface Player {
-  id: number;
-  name: string;
-  breed: string;
-  imageUrl: string;
-  isBenched: boolean;
-}
+import { loadPlayers, benchPlayer, unBenchPlayer } from "../slices/playerSlice";
 
 interface AllPlayersProps {}
 
 const COHORT = "2302-ACC-CT-WEB-PT-A";
 
 const AllPlayers: React.FC<AllPlayersProps> = () => {
-  const [players, setPlayers] = useState<Player[]>([]);
+  //state variables
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState<boolean>(false);
   const [creationSuccess, setCreationSuccess] = useState<boolean | null>(null);
@@ -27,18 +22,25 @@ const AllPlayers: React.FC<AllPlayersProps> = () => {
     null
   );
 
+  // redux
+  const dispatch = useDispatch();
+  const players = useSelector((state: RootState) => state.allPlayers);
+  const benchedPlayers = useSelector((state: RootState) => state.pickedPlayers);
+
+  //call back fucntions
   const fetchPlayers = useCallback(async () => {
     try {
       const response = await fetch(
         `https://fsa-puppy-bowl.herokuapp.com/api/${COHORT}/players`
       );
       const data = await response.json();
-      setPlayers(data.data.players);
+      dispatch(loadPlayers(data.data.players));
     } catch (error) {
       console.error("Error:", error);
     }
-  }, []);
+  }, [dispatch]);
 
+  //Various useEffect hooks
   //fetch them players
   useEffect(() => {
     fetchPlayers();
@@ -54,6 +56,14 @@ const AllPlayers: React.FC<AllPlayersProps> = () => {
       setShowMessage(true);
     }
   }, [creationSuccess, playersCreated]);
+  // Monitor the changes in benchedPlayers
+  useEffect(() => {
+    if (benchedPlayers.length > 3) {
+      setBenchLimitExceeded(true);
+    } else {
+      setBenchLimitExceeded(false);
+    }
+  }, [benchedPlayers]);
 
   //timer for the div to disappear
   useEffect(() => {
@@ -65,29 +75,6 @@ const AllPlayers: React.FC<AllPlayersProps> = () => {
       return () => clearTimeout(timer); //  will clear the timer if the component unmounts before the 5 seconds are up
     }
   }, [showMessage]);
-
-  // handler function for bench  click
-  const handleBenchClick = (id: number) => {
-    const benchedPlayersCount = players.filter(
-      (player) => player.isBenched
-    ).length;
-    if (
-      benchedPlayersCount < 3 ||
-      players.find((player) => player.id === id)?.isBenched
-    ) {
-      setPlayers(
-        players.map((player) =>
-          player.id === id
-            ? { ...player, isBenched: !player.isBenched }
-            : player
-        )
-      );
-      setBenchLimitExceeded(false);
-    } else {
-      setBenchLimitExceeded(true);
-      setBenchLimitMessage("You can only add 3 players!");
-    }
-  };
 
   // timer for  bench limit exceeded message to disappear
   useEffect(() => {
@@ -107,6 +94,39 @@ const AllPlayers: React.FC<AllPlayersProps> = () => {
     }
   }, [benchLimitExceeded]);
 
+  // various handler functions
+  // handler function for bench  click
+
+  const handleBenchClick = (id: number) => {
+    const player: Player | undefined = players.find(
+      (player: Player) => player.id === id
+    );
+
+    if (player) {
+      if (
+        benchedPlayers.find((benchedPlayer) => benchedPlayer.id === player.id)
+      ) {
+        dispatch(unBenchPlayer(id));
+      } else {
+        if (benchedPlayers.length < 3) {
+          setTimeout(() => {
+            dispatch(benchPlayer(id));
+          }, 0);
+        } else {
+          setBenchLimitExceeded(true);
+        }
+      }
+    }
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+  };
+
+  const filteredPlayers = players.filter((player: Player) =>
+    player.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   const deletePlayer = async (id: number) => {
     try {
       const response = await fetch(
@@ -124,14 +144,6 @@ const AllPlayers: React.FC<AllPlayersProps> = () => {
       alert("There was an error deleting the player");
     }
   };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-  };
-
-  const filteredPlayers = players.filter((player) =>
-    player.name.toLowerCase().includes(search.toLowerCase())
-  );
 
   const getFontSize = (name: string) => {
     let baseSize = 16;
